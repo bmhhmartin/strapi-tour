@@ -17,6 +17,7 @@ Strapi itself is out of scope. This app consumes a Strapi 5 REST API that may no
 - **Architecture:** typed component registry + optional catch-all route.
 - **Styling:** Tailwind CSS.
 - **Routing:** App Router, including homepage `/` and nested paths such as `/destinations/bali`.
+- **Page sections:** five primary Dynamic Zone sections (Hero banner, Services, Vision & mission, Tour list, Testimonials), plus three optional utility blocks (RichText, MediaGallery, Slider).
 
 ## Architecture
 
@@ -31,12 +32,13 @@ app/
 components/
   blocks/
     HeroBanner.tsx
+    Services.tsx
+    VisionMission.tsx
+    TourList.tsx
+    Testimonials.tsx
     MediaGallery.tsx
-    DestinationGrid.tsx
     Slider.tsx
-    Quote.tsx
     RichText.tsx
-    WhyChooseUs.tsx
     UnknownBlock.tsx
   BlockRenderer.tsx
 lib/
@@ -61,7 +63,7 @@ fixtures/
 
 ## Types
 
-Shared primitives live in `types/strapi.ts`. Block variants live in `types/blocks.ts` as a discriminated union on `__component`. UIDs match Strapi component names (`shared.hero-banner`, `shared.slider`, and so on).
+Shared primitives live in `types/strapi.ts`. Block variants live in `types/blocks.ts` as a discriminated union on `__component`. UIDs match Strapi component names (`shared.hero-banner`, `shared.tour-list`, and so on).
 
 **Media**
 
@@ -102,21 +104,27 @@ type Page = {
 };
 ```
 
-**Blocks (discriminated union)**
+### Primary sections (five)
 
 | `__component` | Fields |
 |---|---|
 | `shared.hero-banner` | `title`, `subtitle?`, `ctaLabel?`, `ctaHref?`, `background: StrapiMedia` |
+| `shared.services` | `heading?`, `intro?`, `items` (repeatable): `{ title, body, icon?: string }` (`icon` is a string key, not media) |
+| `shared.vision-mission` | `heading?`, `visionTitle`, `visionBody`, `missionTitle`, `missionBody`, `image?: StrapiMedia \| null` |
+| `shared.tour-list` | `heading?`, `tours` (repeatable): `{ title, location, duration?, price?, excerpt?, href, image: StrapiMedia }` |
+| `shared.testimonials` | `heading?`, `quotes` (repeatable): `{ body, attribution?, role? }` |
+
+### Utility blocks (optional)
+
+| `__component` | Fields |
+|---|---|
 | `shared.media-gallery` | `heading?`, `images: StrapiMedia[]` |
-| `shared.destination-grid` | `heading?`, `destinations` (repeatable component): `{ name, blurb, href, image }` |
-| `shared.slider` | `heading?`, `slides` (repeatable component): `{ caption?, image }` |
-| `shared.quote` | `body`, `attribution?` |
+| `shared.slider` | `heading?`, `slides` (repeatable): `{ caption?, image: StrapiMedia }` |
 | `shared.rich-text` | `body: string \| StrapiBlockNode[]` — if `string`, treat as HTML; if array, render Strapi Blocks |
-| `shared.why-choose-us` | `heading?`, `items` (repeatable component): `{ title, body, icon?: string }` (`icon` is a string key, not media) |
 
-`destinations`, `slides`, and `items` are nested components in the Dynamic Zone payload, not relations to other collection types.
+`items`, `tours`, `quotes`, and `slides` are nested components in the Dynamic Zone payload, not relations to other collection types.
 
-Every block includes `id: number` plus `__component`. `PageBlock` is the union of all seven.
+Every block includes `id: number` plus `__component`. `PageBlock` is the union of all eight UIDs above.
 
 Adding a block later means: add the UID to the union, add the React component, add one registry entry, and add a populate fragment if the block has relations.
 
@@ -127,16 +135,17 @@ Adding a block later means: add the UID to the union, add the React component, a
 ```ts
 const blockMap = {
   "shared.hero-banner": HeroBanner,
+  "shared.services": Services,
+  "shared.vision-mission": VisionMission,
+  "shared.tour-list": TourList,
+  "shared.testimonials": Testimonials,
   "shared.media-gallery": MediaGallery,
-  "shared.destination-grid": DestinationGrid,
   "shared.slider": Slider,
-  "shared.quote": Quote,
   "shared.rich-text": RichText,
-  "shared.why-choose-us": WhyChooseUs,
 } satisfies Record<PageBlock["__component"], ComponentType<any>>;
 ```
 
-The registry is a full `Record` of the seven known UIDs so adding a union member without a component is a type error. At runtime, look up `block.__component`; if the key is absent (CMS sent an unhandled UID), render `UnknownBlock`. Keys are `${__component}-${id}`.
+The registry is a full `Record` of the eight known UIDs so adding a union member without a component is a type error. At runtime, look up `block.__component`; if the key is absent (CMS sent an unhandled UID), render `UnknownBlock`. Keys are `${__component}-${id}`.
 
 `UnknownBlock`: in development, show the unhandled UID; in production, render nothing. The page must not throw.
 
@@ -160,10 +169,11 @@ Example: `/destinations/bali` → `destinations/bali`
 Populate `seo.shareImage` and, per Dynamic Zone component that has media/relations, an `[on][uid]` fragment:
 
 - `shared.hero-banner` → `background`
+- `shared.vision-mission` → `image`
+- `shared.tour-list` → nested `tours.image`
 - `shared.media-gallery` → `images`
-- `shared.destination-grid` → nested destination images
-- `shared.slider` → slide images
-- `shared.why-choose-us`, `shared.quote`, `shared.rich-text` → no media populate
+- `shared.slider` → nested `slides.image`
+- `shared.services`, `shared.testimonials`, `shared.rich-text` → no media populate
 
 **Fallback**
 
@@ -176,8 +186,8 @@ Populate `seo.shareImage` and, per Dynamic Zone component that has media/relatio
 
 `fixtures/pages.ts` includes at least:
 
-- `home` — HeroBanner, WhyChooseUs, MediaGallery
-- `destinations/bali` — HeroBanner, Quote, Slider
+- `home` — HeroBanner, Services, VisionMission, TourList, Testimonials
+- `destinations/bali` — HeroBanner, TourList, Testimonials
 
 ## Routing and SEO
 
@@ -201,15 +211,23 @@ Populate `seo.shareImage` and, per Dynamic Zone component that has media/relatio
 
 Travel-guide tone, Tailwind only, no separate design system.
 
+### Primary sections
+
 | Block | UI |
 |---|---|
-| HeroBanner | Full-bleed `next/image`, title, subtitle, optional CTA link |
+| HeroBanner | Full-bleed `next/image`, overlay title, subtitle, optional CTA link |
+| Services | Optional heading/intro, responsive 3-column cards (title, body, optional icon) |
+| VisionMission | Optional heading, two columns (vision / mission), optional photo with `next/image` |
+| TourList | Optional heading, card grid: image, title, location, duration/price, excerpt, link |
+| Testimonials | Optional heading, quote cards (body, attribution, optional role) |
+
+### Utility blocks
+
+| Block | UI |
+|---|---|
 | MediaGallery | Responsive image grid with `sizes` |
-| DestinationGrid | Card grid: image, name, blurb, link |
 | Slider | CSS scroll-snap carousel (image + caption); no slider library |
-| Quote | Pull quote + attribution |
 | RichText | Article prose (`prose`) from Blocks JSON or HTML string |
-| WhyChooseUs | Heading + list of title/body items |
 
 Empty `blocks` array: page shell and title only.
 
@@ -235,11 +253,13 @@ Empty `blocks` array: page shell and title only.
 - Auth, i18n, draft/preview mode
 - Animation-heavy carousel libraries
 - Codegen from Strapi OpenAPI
+- DestinationGrid, Quote, and WhyChooseUs blocks (replaced by TourList, Testimonials, and Services)
 
 ## Success criteria
 
-- `/` and `/destinations/bali` render from fixtures with no Strapi process running.
+- `/` renders from fixtures with all five primary sections: Hero banner, Services, Vision & mission, Tour list, Testimonials.
+- `/destinations/bali` renders from fixtures with Hero banner, Tour list, and Testimonials.
 - Replacing fixture data with live API data does not require changes to `BlockRenderer` or block components.
 - An unknown `__component` does not crash the page.
 - `generateMetadata` reflects the page SEO component when present.
-- Gallery and hero images use `next/image`.
+- Hero, vision, tour, and gallery images use `next/image`.
