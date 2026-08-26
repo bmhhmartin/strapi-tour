@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f4efe6;
+  --foreground: #14221c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: #14221c;
+  --color-sand: #f4efe6;
+  --color-terracotta: #c45c26;
+  --color-ocean: #1f6f6a;
+  --color-foam: #e7f0ee;
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.prose-travel h2 {
+  font-family: var(--font-serif);
+  font-size: 1.875rem;
+  line-height: 1.2;
+  color: var(--color-ink);
+}
+
+.prose-travel p {
+  line-height: 1.7;
+  color: color-mix(in oklab, var(--color-ink) 80%, transparent);
+}
+
+.prose-travel a {
+  color: var(--color-terracotta);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
