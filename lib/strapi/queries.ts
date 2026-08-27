@@ -1,16 +1,20 @@
-const params = new URLSearchParams({
-  "populate[seo][populate]": "shareImage",
-  "populate[blocks][on][shared.hero-banner][populate]": "background",
-  "populate[blocks][on][shared.vision-mission][populate]": "image",
-  "populate[blocks][on][shared.tour-list][populate][tours][populate]": "image",
-  "populate[blocks][on][shared.media-gallery][populate]": "images",
-  "populate[blocks][on][shared.slider][populate][slides][populate]": "image",
-  "populate[blocks][on][shared.services]": "true",
-  "populate[blocks][on][shared.testimonials][populate]": "quotes",
-  "populate[blocks][on][shared.rich-text]": "true",
-});
+const blocksPopulate = [
+  "populate[blocks][on][shared.hero-banner][populate]=background",
+  "populate[blocks][on][shared.vision-mission][populate]=image",
+  "populate[blocks][on][shared.tour-list][populate][tours][populate]=image",
+  "populate[blocks][on][shared.media-gallery][populate]=images",
+  "populate[blocks][on][shared.slider][populate]=files",
+  "populate[blocks][on][shared.services][populate]=items",
+  "populate[blocks][on][shared.testimonials][populate]=quotes",
+  "populate[blocks][on][shared.rich-text]=true",
+  "populate[blocks][on][shared.quote]=true",
+  "populate[blocks][on][shared.media][populate]=file",
+].join("&");
 
-export const pagesPopulateQuery = params.toString();
+export const pagesPopulateQuery = [
+  "populate[seo][populate]=shareImage",
+  blocksPopulate,
+].join("&");
 
 export const articlesListQuery = [
   "populate[cover]=true",
@@ -23,7 +27,7 @@ export const articleBySlugQuery = [
   "populate[cover]=true",
   "populate[author][populate]=avatar",
   "populate[category]=true",
-  "populate[blocks][populate]=*",
+  blocksPopulate,
 ].join("&");
 
 export const globalPopulateQuery = [
@@ -31,6 +35,14 @@ export const globalPopulateQuery = [
   "populate[defaultSeo][populate]=shareImage",
 ].join("&");
 
-export const aboutPopulateQuery = "populate[blocks][populate]=*";
+export const aboutPopulateQuery = [
+  "populate[about_hero][populate]=background",
+  blocksPopulate,
+].join("&");
+
+export const homepagePopulateQuery = [
+  "populate[home_hero][populate]=background",
+  blocksPopulate,
+].join("&");
 
 export const authorsPopulateQuery = "populate=avatar";

@@ -174,6 +174,97 @@ describe("content getters", () => {
     expect(await getArticleBySlug("missing")).toBeNull();
   });
 
+  it("getAbout maps about_hero entries onto hero-banner blocks", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          id: 1,
+          documentId: "about-1",
+          title: "About the strapi blog test",
+          about_hero: [
+            {
+              id: 2,
+              title: "fasdfasd",
+              subtitle: "adsfasdfasdf",
+              ctaLabel: "asdfasdf",
+              ctaHref: "asdfasdf",
+              background: {
+                id: 8,
+                documentId: "media-8",
+                url: "/uploads/beautiful_picture.jpeg",
+                alternativeText: "beautiful-picture",
+                width: 1200,
+                height: 799,
+                mime: "image/jpeg",
+              },
+            },
+          ],
+        },
+      }),
+    });
+
+    const { getAbout } = await import("./client");
+    const about = await getAbout();
+
+    expect(about?.title).toBe("About the strapi blog test");
+    expect(about?.blocks).toHaveLength(1);
+    expect(about?.blocks[0]).toMatchObject({
+      __component: "shared.hero-banner",
+      id: 2,
+      title: "fasdfasd",
+      subtitle: "adsfasdfasdf",
+    });
+    const url = String(fetchMock.mock.calls[0]?.[0]);
+    expect(url).toContain("/api/about?");
+    expect(url).toContain("about_hero");
+  });
+
+  it("getHomepage maps home_hero entries onto hero-banner blocks", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          id: 1,
+          documentId: "home-1",
+          title: "Meridian Trails",
+          home_hero: [
+            {
+              id: 3,
+              title: "The world, unhurried",
+              subtitle: "Small-group journeys",
+              ctaLabel: "Browse tours",
+              ctaHref: "#tours",
+              background: {
+                id: 9,
+                documentId: "media-9",
+                url: "/uploads/hero.jpeg",
+                alternativeText: "Valley",
+                width: 1600,
+                height: 900,
+                mime: "image/jpeg",
+              },
+            },
+          ],
+        },
+      }),
+    });
+
+    const { getHomepage } = await import("./client");
+    const homepage = await getHomepage();
+
+    expect(homepage?.title).toBe("Meridian Trails");
+    expect(homepage?.blocks).toHaveLength(1);
+    expect(homepage?.blocks[0]).toMatchObject({
+      __component: "shared.hero-banner",
+      id: 3,
+      title: "The world, unhurried",
+    });
+    const url = String(fetchMock.mock.calls[0]?.[0]);
+    expect(url).toContain("/api/homepage?");
+    expect(url).toContain("home_hero");
+  });
+
   it("getGlobal returns the single-type object", async () => {
     fetchMock.mockResolvedValue({
       ok: true,

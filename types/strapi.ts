@@ -72,12 +72,16 @@ export type Global = {
   defaultSeo: Seo | null;
 };
 
-export type About = {
+export type CmsPage = {
   id: number;
   documentId: string;
   title: string;
   blocks: PageBlock[];
 };
+
+export type About = CmsPage;
+
+export type Homepage = CmsPage;
 
 export type StrapiCollection<T> = {
   data: T[];

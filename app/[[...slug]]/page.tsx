@@ -10,9 +10,10 @@ import {
   getArticles,
   getCategories,
   getGlobal,
+  getHomepage,
 } from "@/lib/strapi/client";
 import { toImageProps } from "@/lib/media";
-import type { About, Article } from "@/types/strapi";
+import type { Article, CmsPage } from "@/types/strapi";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,10 @@ export async function generateMetadata({
   const route = routeFromSlug(slug);
 
   if (route.kind === "home") {
+    const homepage = await getHomepage();
+    if (homepage && homepage.blocks.length > 0) {
+      return { title: homepage.title };
+    }
     const global = await getGlobal();
     return {
       title: global.defaultSeo?.metaTitle || global.siteName,
@@ -69,13 +74,17 @@ export default async function DynamicPage({ params, searchParams }: PageProps) {
 
   if (route.kind === "home") {
     const { category } = await searchParams;
-    return <HomePage categorySlug={category} />;
+    const homepage = await getHomepage();
+    if (homepage && homepage.blocks.length > 0) {
+      return <CmsPageView eyebrow="Home" page={homepage} />;
+    }
+    return <BlogHomePage categorySlug={category} />;
   }
 
   if (route.kind === "about") {
     const about = await getAbout();
     if (!about) notFound();
-    return <AboutPage about={about} />;
+    return <CmsPageView eyebrow="About" page={about} />;
   }
 
   if (route.kind === "article") {
@@ -87,7 +96,7 @@ export default async function DynamicPage({ params, searchParams }: PageProps) {
   notFound();
 }
 
-async function HomePage({ categorySlug }: { categorySlug?: string }) {
+async function BlogHomePage({ categorySlug }: { categorySlug?: string }) {
   const [global, articles, categories] = await Promise.all([
     getGlobal(),
     getArticles({ categorySlug }),
@@ -126,23 +135,31 @@ async function HomePage({ categorySlug }: { categorySlug?: string }) {
   );
 }
 
-function AboutPage({ about }: { about: About }) {
+function CmsPageView({
+  eyebrow,
+  page,
+}: {
+  eyebrow: string;
+  page: CmsPage;
+}) {
   return (
     <article>
-      <div className="mx-auto max-w-6xl px-6 pt-16 md:pt-24">
-        <p className="text-xs font-medium uppercase tracking-[0.22em] text-terracotta">
-          About
-        </p>
-        <h1 className="mt-4 font-serif text-5xl tracking-tight text-ink md:text-6xl">
-          {about.title}
-        </h1>
-      </div>
-      {about.blocks.length === 0 ? (
+      {page.title ? (
+        <div className="mx-auto max-w-6xl px-6 pt-16 md:pt-24">
+          <p className="text-xs font-medium uppercase tracking-[0.22em] text-terracotta">
+            {eyebrow}
+          </p>
+          <h1 className="mt-4 font-serif text-5xl tracking-tight text-ink md:text-6xl">
+            {page.title}
+          </h1>
+        </div>
+      ) : null}
+      {(page.blocks ?? []).length === 0 ? (
         <p className="mx-auto max-w-6xl px-6 py-16 text-lg text-ink/70">
           This page has no published blocks yet.
         </p>
       ) : (
-        <BlockRenderer blocks={about.blocks} />
+        <BlockRenderer blocks={page.blocks} />
       )}
     </article>
   );

@@ -5,14 +5,18 @@ import {
   articlesListQuery,
   authorsPopulateQuery,
   globalPopulateQuery,
+  homepagePopulateQuery,
   pagesPopulateQuery,
 } from "@/lib/strapi/queries";
+import type { HeroBannerBlock, PageBlock } from "@/types/blocks";
 import type {
   About,
   Article,
   Author,
   Category,
+  CmsPage,
   Global,
+  Homepage,
   Page,
   StrapiCollection,
   StrapiSingle,
@@ -131,12 +135,65 @@ export async function getGlobal(): Promise<Global> {
   return json.data;
 }
 
+type AboutHeroEntry = Omit<HeroBannerBlock, "__component">;
+
+type RawCmsPage = {
+  id: number;
+  documentId: string;
+  title?: string | null;
+  blocks?: PageBlock[] | null;
+  about_hero?: AboutHeroEntry[] | null;
+  home_hero?: AboutHeroEntry[] | null;
+};
+
+export function toCmsPage(
+  raw: RawCmsPage,
+  fallbackTitle: string,
+): CmsPage {
+  const heroes: PageBlock[] = [
+    ...(raw.about_hero ?? []),
+    ...(raw.home_hero ?? []),
+  ].map((hero) => ({
+    __component: "shared.hero-banner",
+    ...hero,
+  }));
+  const fromZone = raw.blocks ?? [];
+
+  return {
+    id: raw.id,
+    documentId: raw.documentId,
+    title: raw.title ?? fallbackTitle,
+    blocks: [...heroes, ...fromZone],
+  };
+}
+
+export function toAbout(raw: RawCmsPage): About {
+  return toCmsPage(raw, "About");
+}
+
 export async function getAbout(): Promise<About | null> {
-  const json = await fetchJSON<StrapiSingle<About>>(
+  const json = await fetchJSON<StrapiSingle<RawCmsPage>>(
     "/api/about",
     aboutPopulateQuery,
   );
-  return json.data;
+  if (!json.data) return null;
+  return toAbout(json.data);
+}
+
+export async function getHomepage(): Promise<Homepage | null> {
+  try {
+    const json = await fetchJSON<StrapiSingle<RawCmsPage>>(
+      "/api/homepage",
+      homepagePopulateQuery,
+    );
+    if (!json.data) return null;
+    return toCmsPage(json.data, "");
+  } catch (error) {
+    if (error instanceof StrapiError && (error.status === 403 || error.status === 404)) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function getCategories(): Promise<Category[]> {
